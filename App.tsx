@@ -134,7 +134,11 @@ function App() {
       });
       return true;
     } catch (e: any) {
-        setError({ title: "Syntax Error", message: `Failed to start debugger: ${e.message}` });
+        const errorMessage = (e instanceof SyntaxError || e.name === 'SyntaxError')
+            ? t('debuggerInvalidSyntaxError')
+            : `Failed to start debugger: ${e.message}`;
+
+        setError({ title: t('syntaxErrorTitle'), message: errorMessage });
         setIsDebugging(false);
         return false;
     }

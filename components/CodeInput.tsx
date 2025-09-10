@@ -27,6 +27,9 @@ const CodeInput: React.FC<CodeInputProps> = ({
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const [lineCount, setLineCount] = useState(code.split('\n').length);
 
+  // Disable debug button for non-JS files
+  const isJsFile = fileName ? /\.(js|jsx|ts|tsx)$/i.test(fileName) : true;
+
   useEffect(() => {
     setLineCount(code.split('\n').length);
   }, [code]);
@@ -129,8 +132,9 @@ const CodeInput: React.FC<CodeInputProps> = ({
         <div className="flex items-center gap-2">
             <button
                 onClick={onDebug}
-                disabled={isLoading || isDebugging}
-                className="flex items-center justify-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-md transition-all shadow-md hover:shadow-lg hover:shadow-blue-500/20 disabled:from-gray-500 disabled:to-gray-600 disabled:shadow-none"
+                disabled={isLoading || isDebugging || !isJsFile}
+                title={!isJsFile ? t('debugButtonDisabledTooltip') : t('debugButton')}
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-md transition-all shadow-md hover:shadow-lg hover:shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
             >
                 <DebugIcon className="w-5 h-5" />
                 {t('debugButton')}

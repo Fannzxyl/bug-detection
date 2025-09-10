@@ -11,6 +11,7 @@ export const translations = {
     uploadFileButton: 'Upload File',
     clearInputButton: 'Clear',
     debugButton: 'Debug',
+    debugButtonDisabledTooltip: 'Debugging is only available for JavaScript files (.js, .jsx, .ts, .tsx).',
     analyzeButton: 'Analyze Code',
     analyzingButton: 'Analyzing...',
     loadedFromFile: 'Loaded',
@@ -57,6 +58,7 @@ export const translations = {
     // Error Display
     errorTitle: 'An Error Occurred',
     errorDismiss: 'Dismiss',
+    syntaxErrorTitle: 'Syntax Error',
 
     // Debugger Panel
     debuggerTitle: 'Debugger',
@@ -68,6 +70,7 @@ export const translations = {
     debuggerRestart: 'Restart',
     debuggerConsoleStart: 'Debugger started.',
     debuggerFinished: 'Execution finished.',
+    debuggerInvalidSyntaxError: 'Failed to start debugger. Please ensure you are debugging valid JavaScript code. HTML, CSS, and other languages are not supported.',
   },
   id: {
     // Header
@@ -81,6 +84,7 @@ export const translations = {
     uploadFileButton: 'Unggah File',
     clearInputButton: 'Bersihkan',
     debugButton: 'Debug',
+    debugButtonDisabledTooltip: 'Debugging hanya tersedia untuk file JavaScript (.js, .jsx, .ts, .tsx).',
     analyzeButton: 'Analisis Kode',
     analyzingButton: 'Menganalisis...',
     loadedFromFile: 'Dimuat',
@@ -127,6 +131,7 @@ export const translations = {
     // Error Display
     errorTitle: 'Terjadi Kesalahan',
     errorDismiss: 'Tutup',
+    syntaxErrorTitle: 'Kesalahan Sintaks',
 
     // Debugger Panel
     debuggerTitle: 'Debugger',
@@ -138,5 +143,6 @@ export const translations = {
     debuggerRestart: 'Mulai Ulang',
     debuggerConsoleStart: 'Debugger dimulai.',
     debuggerFinished: 'Eksekusi selesai.',
+    debuggerInvalidSyntaxError: 'Gagal memulai debugger. Pastikan kode yang Anda debug adalah JavaScript yang valid. HTML, CSS, dan bahasa lain tidak didukung.',
   },
 };

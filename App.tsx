@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import Interpreter from 'js-interpreter';
 import Header from './components/Header';
 import CodeInput from './components/CodeInput';
 import AnalysisDisplay from './components/AnalysisDisplay';
@@ -33,31 +34,29 @@ const ErrorDisplay: React.FC<{ error: AppError; onDismiss: () => void }> = ({ er
 
 const DEFAULT_CODE = `// Welcome to the Gemini Code Inspector!
 // Paste your code here, upload a file, or use this example.
-// Then, press "Analyze Code" or Ctrl+Enter.
+// Click on a line number to set a breakpoint, then press "Debug".
 
 function calculateTotal(items) {
   let total = 0;
   items.forEach(item => {
-    // BUG: This should be multiplication, not addition
-    total = item.price + item.quantity; 
+    total = item.price * item.quantity; 
+    console.log('Calculating for:', item.name, 'New total:', total);
   });
   return total;
 }
 
-// FEATURE: A simple REST API endpoint using express
-import express from 'express';
-const app = express();
+const myItems = [
+    { name: 'Laptop', price: 1200, quantity: 1 },
+    { name: 'Mouse', price: 25, quantity: 2 },
+    { name: 'Keyboard', price: 75, quantity: 1 }
+];
 
-app.get('/api/users', (req, res) => {
-  // LOG_SUGGESTION: Should log when this endpoint is hit
-  // RISK: No authentication or validation
-  const users = [{ id: 1, name: 'John Doe' }];
-  res.json(users);
-});
+const finalTotal = calculateTotal(myItems);
+console.log('Final Total:', finalTotal);
 `;
 
 function App() {
-  const { language } = useSettings();
+  const { language, t } = useSettings();
   const { addHistoryEntry } = useHistory();
   const [code, setCode] = useState<string>(DEFAULT_CODE);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -70,7 +69,7 @@ function App() {
   
   // Debugger state
   const [isDebugging, setIsDebugging] = useState(false);
-  const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
+  const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set([10]));
   const [debuggerState, setDebuggerState] = useState<DebuggerState>({
       isPaused: false,
       scope: null,
@@ -78,9 +77,11 @@ function App() {
       consoleOutput: [],
       isFinished: false,
   });
+  
+  const interpreterRef = useRef<any>(null);
 
   const handleAnalyze = useCallback(async () => {
-    if (!code.trim()) return;
+    if (!code.trim() || isDebugging) return;
 
     setIsLoading(true);
     setError(null);
@@ -105,27 +106,133 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [code, language, addHistoryEntry, fileName]);
+  }, [code, language, addHistoryEntry, fileName, isDebugging]);
+
+  // --- DEBUGGER LOGIC ---
+  const initInterpreter = useCallback(() => {
+    // Function to be called by the interpreter for console.log
+    const initFunc = (interpreter: any, globalObject: any) => {
+        const consoleWrapper = interpreter.nativeToPseudo(
+            (text: any) => {
+                const message = String(text);
+                setDebuggerState(prev => ({...prev, consoleOutput: [...prev.consoleOutput, message]}));
+                return interpreter.nativeToPseudo(undefined);
+            }
+        );
+        interpreter.setProperty(globalObject, 'console.log', consoleWrapper);
+    };
+
+    try {
+      const newInterpreter = new Interpreter(code, initFunc);
+      interpreterRef.current = newInterpreter;
+      setDebuggerState({
+          isPaused: true,
+          scope: null,
+          activeLine: -1,
+          consoleOutput: [t('debuggerConsoleStart')],
+          isFinished: false,
+      });
+      return true;
+    } catch (e: any) {
+        setError({ title: "Syntax Error", message: `Failed to start debugger: ${e.message}` });
+        setIsDebugging(false);
+        return false;
+    }
+  }, [code, t]);
   
-  const handleDebug = () => {
-    // Placeholder for actual debugging logic
-    setIsDebugging(true);
-    setAnalysisResult(null); // Clear analysis results when debugging
-    setDebuggerState({
-      isPaused: true,
-      scope: { message: "Debugger is not fully implemented.", advice: "This is a UI placeholder." },
-      activeLine: 5, // Example line
-      consoleOutput: ["Debugger started.", "Execution paused at breakpoint on line 5."],
-      isFinished: false,
-    });
+  const getInterpreterScope = () => {
+      if (!interpreterRef.current || !interpreterRef.current.getScope) {
+          return null;
+      }
+      const scope = interpreterRef.current.getScope();
+      const scopeVariables: { [key: string]: any } = {};
+
+      let currentScope = scope;
+      while (currentScope) {
+          const properties = Object.getOwnPropertyNames(currentScope.properties);
+          properties.forEach(prop => {
+              if (!(prop in scopeVariables)) { // Avoid overwriting variables from inner scopes
+                  const value = interpreterRef.current.pseudoToNative(currentScope.properties[prop]);
+                  // Limit depth to avoid circular references and huge objects
+                  scopeVariables[prop] = JSON.parse(JSON.stringify(value, (key, value) => {
+                    return value;
+                  }, 2));
+              }
+          });
+          currentScope = currentScope.parentScope;
+      }
+      return scopeVariables;
   };
-  
+
+  const runInterpreter = useCallback((stepMode = false) => {
+    if (!interpreterRef.current || debuggerState.isFinished) return;
+
+    let hasMoreCode = true;
+    let steps = 0;
+    const maxSteps = 50000; // Safety break to prevent infinite loops
+
+    while(hasMoreCode) {
+        try {
+            hasMoreCode = interpreterRef.current.step();
+            const node = interpreterRef.current.stateStack[interpreterRef.current.stateStack.length - 1]?.node;
+            
+            if (node) {
+              const activeLine = node.loc.start.line;
+              if (activeLine !== debuggerState.activeLine) {
+                 if (!stepMode && breakpoints.has(activeLine) && steps > 0) {
+                     setDebuggerState(prev => ({ ...prev, isPaused: true, activeLine, scope: getInterpreterScope() }));
+                     return;
+                 }
+                 if(stepMode) {
+                     setDebuggerState(prev => ({ ...prev, isPaused: true, activeLine, scope: getInterpreterScope() }));
+                     return;
+                 }
+              }
+            }
+        } catch (e: any) {
+            setDebuggerState(prev => ({ ...prev, consoleOutput: [...prev.consoleOutput, `ERROR: ${e.message}`], isFinished: true, isPaused: true }));
+            return;
+        }
+
+        if (steps++ > maxSteps) {
+          setDebuggerState(prev => ({ ...prev, consoleOutput: [...prev.consoleOutput, "ERROR: Max execution steps exceeded. Possible infinite loop."], isFinished: true, isPaused: true }));
+          return;
+        }
+
+        if (!hasMoreCode) {
+          setDebuggerState(prev => ({ ...prev, isFinished: true, isPaused: true, activeLine: -1, scope: getInterpreterScope() }));
+        }
+    }
+  }, [breakpoints, debuggerState.activeLine, debuggerState.isFinished]);
+
+  const handleDebug = () => {
+    setIsDebugging(true);
+    setAnalysisResult(null);
+    if(initInterpreter()) {
+      // Small timeout to allow state to update before running
+      setTimeout(() => runInterpreter(false), 10);
+    }
+  };
+
   const handleStopDebug = () => {
       setIsDebugging(false);
-      // Reset debugger state
-      setDebuggerState({
-          isPaused: false, scope: null, activeLine: -1, consoleOutput: [], isFinished: false
-      });
+      interpreterRef.current = null;
+      setDebuggerState({ isPaused: false, scope: null, activeLine: -1, consoleOutput: [], isFinished: false });
+  };
+  
+  const handleContinue = () => {
+      setDebuggerState(prev => ({...prev, isPaused: false}));
+      setTimeout(() => runInterpreter(false), 0);
+  };
+  
+  const handleStep = () => {
+      runInterpreter(true);
+  };
+
+  const handleRestartDebug = () => {
+    if (initInterpreter()) {
+      setTimeout(() => runInterpreter(false), 10);
+    }
   };
 
   const handleToggleBreakpoint = (line: number) => {
@@ -162,17 +269,18 @@ function App() {
     if(isDebugging) handleStopDebug();
   }, [isDebugging]);
   
-  // Keyboard shortcut for closing modals
+  // Keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (isHistoryOpen) setIsHistoryOpen(false);
         if (isSettingsOpen) setIsSettingsOpen(false);
+        if (isDebugging) handleStopDebug();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isHistoryOpen, isSettingsOpen]);
+  }, [isHistoryOpen, isSettingsOpen, isDebugging]);
 
   return (
     <div className="bg-gray-900 text-gray-200 min-h-screen font-sans">
@@ -200,9 +308,10 @@ function App() {
         {isDebugging && (
             <DebuggerPanel 
                 state={debuggerState}
-                onContinue={() => alert('Continue clicked (not implemented)')}
-                onStep={() => alert('Step Over clicked (not implemented)')}
+                onContinue={handleContinue}
+                onStep={handleStep}
                 onStop={handleStopDebug}
+                onRestart={handleRestartDebug}
             />
         )}
 

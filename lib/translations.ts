@@ -60,11 +60,14 @@ export const translations = {
 
     // Debugger Panel
     debuggerTitle: 'Debugger',
-    debuggerScope: 'Scope',
-    debuggerConsole: 'Console',
+    debuggerScope: 'Scope & Variables',
+    debuggerConsole: 'Console Output',
     debuggerContinue: 'Continue',
     debuggerStepOver: 'Step Over',
     debuggerStop: 'Stop',
+    debuggerRestart: 'Restart',
+    debuggerConsoleStart: 'Debugger started.',
+    debuggerFinished: 'Execution finished.',
   },
   id: {
     // Header
@@ -127,10 +130,13 @@ export const translations = {
 
     // Debugger Panel
     debuggerTitle: 'Debugger',
-    debuggerScope: 'Lingkup',
-    debuggerConsole: 'Konsol',
+    debuggerScope: 'Lingkup & Variabel',
+    debuggerConsole: 'Output Konsol',
     debuggerContinue: 'Lanjutkan',
     debuggerStepOver: 'Langkahi',
     debuggerStop: 'Hentikan',
+    debuggerRestart: 'Mulai Ulang',
+    debuggerConsoleStart: 'Debugger dimulai.',
+    debuggerFinished: 'Eksekusi selesai.',
   },
 };

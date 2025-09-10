@@ -1,125 +1,103 @@
-import React, { useCallback, useRef, useEffect, useState } from 'react';
-import { AnalyzeIcon, UploadIcon, ClearIcon } from './Icon';
+import React, { useRef, useCallback } from 'react';
+import { AnalyzeIcon, ClearIcon, UploadIcon } from './Icon';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface CodeInputProps {
   code: string;
-  fileName: string | null;
-  onCodeChange: (newCode: string, newFileName: string | null) => void;
+  setCode: (code: string) => void;
   onAnalyze: () => void;
   isLoading: boolean;
+  fileName: string | null;
+  onFileLoad: (content: string, name: string) => void;
+  onClear: () => void;
 }
 
-const CodeInput: React.FC<CodeInputProps> = ({ code, fileName, onCodeChange, onAnalyze, isLoading }) => {
-  const [lineCount, setLineCount] = useState<number>(1);
+const CodeInput: React.FC<CodeInputProps> = ({ code, setCode, onAnalyze, isLoading, fileName, onFileLoad, onClear }) => {
+  const { t } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const lines = code.split('\n').length;
-    setLineCount(lines > 0 ? lines : 1);
-  }, [code]);
-
-  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const text = e.target?.result as string;
-        onCodeChange(text, file.name);
+        const text = e.target?.result;
+        if (typeof text === 'string') {
+          onFileLoad(text, file.name);
+        }
       };
       reader.onerror = () => {
-        console.error("Failed to read file");
-        onCodeChange(code, "Error reading file");
-      }
+        alert(t('fileReadError'));
+      };
       reader.readAsText(file);
-    }
-  }, [onCodeChange, code]);
-
-  const handleAnalyzeClick = useCallback(() => {
-    onAnalyze();
-  }, [onAnalyze]);
-
-  const handleClear = () => {
-    onCodeChange('', null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      event.target.value = ''; // Reset file input
     }
   };
-  
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.ctrlKey && event.key === 'Enter') {
       event.preventDefault();
-      if (!isLoading && code.trim()) {
+      if (!isLoading) {
         onAnalyze();
       }
     }
-  };
+  }, [isLoading, onAnalyze]);
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 shadow-xl overflow-hidden">
-      <div className="p-4">
-        {/* The parent container now handles scrolling, ensuring line numbers and textarea are always in sync */}
-        <div className="bg-gray-900 rounded-md border border-gray-600 focus-within:ring-2 focus-within:ring-cyan-500 transition-shadow overflow-y-auto h-96 min-h-[20rem]">
-          <div className="flex">
-            <div
-              className="flex-shrink-0 p-4 text-right text-gray-500 font-mono select-none bg-gray-900 leading-relaxed sticky top-0"
-              aria-hidden="true"
-            >
-              {Array.from({ length: lineCount }, (_, i) => (
-                <div key={i}>{i + 1}</div>
-              ))}
-            </div>
-            <textarea
-              value={code}
-              onChange={(e) => onCodeChange(e.target.value, null) }
-              onKeyDown={handleKeyDown}
-              placeholder="Paste your code here... (Ctrl+Enter to analyze)"
-              className="flex-grow bg-transparent text-gray-300 font-mono p-4 focus:outline-none leading-relaxed resize-none"
-              spellCheck="false"
-              disabled={isLoading}
-              rows={lineCount} // Ensure textarea has enough rows to avoid internal scrollbar
-            />
-          </div>
-        </div>
+    <div className="bg-gray-800/50 border border-white/10 p-4 rounded-lg shadow-lg flex flex-col gap-4">
+      <div className="relative">
+        <textarea
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={t('codeInputPlaceholder')}
+          className="w-full h-80 p-3 bg-gray-900/50 text-gray-300 rounded-lg focus:ring-2 focus:ring-brand-purple focus:outline-none transition-shadow resize-y font-mono text-sm"
+          spellCheck="false"
+          disabled={isLoading}
+        />
         {fileName && (
-          <div className="mt-2 text-sm text-gray-400">
-            Loaded from: <span className="font-medium text-cyan-400">{fileName}</span>
+          <div className="absolute bottom-2 right-2 text-xs bg-gray-900/80 text-gray-400 px-2 py-1 rounded">
+            {t('loadedFromFile')}: {fileName}
           </div>
         )}
       </div>
-      <div className="bg-gray-800/50 px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-700">
-        <div className="flex items-center gap-2 flex-col sm:flex-row">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
           <input
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
             className="hidden"
-            id="file-upload"
-            accept=".js,.ts,.jsx,.tsx,.py,.java,.cs,.go,.rs,.php,.html,.css,.json"
-            disabled={isLoading}
+            accept=".js,.jsx,.ts,.tsx,.py,.java,.go,.rs,.php,.html,.css,.json,text/*"
           />
-          <label htmlFor="file-upload" className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-md cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed">
+          <button
+            onClick={handleUploadClick}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-md transition-colors disabled:opacity-50"
+          >
             <UploadIcon className="w-5 h-5" />
-            <span>Upload File</span>
-          </label>
-          {code && (
-            <button
-              onClick={handleClear}
-              disabled={isLoading}
-              className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-red-800 hover:bg-red-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Clear input"
-            >
-              <ClearIcon className="w-5 h-5" />
-              <span className="sm:hidden">Clear Input</span>
-            </button>
-          )}
+            <span className="hidden sm:inline">{t('uploadFileButton')}</span>
+          </button>
+          <button
+            onClick={onClear}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-md transition-colors disabled:opacity-50"
+          >
+            <ClearIcon className="w-5 h-5" />
+            <span className="hidden sm:inline">{t('clearInputButton')}</span>
+          </button>
         </div>
         <button
-          onClick={handleAnalyzeClick}
-          disabled={isLoading || !code.trim()}
-          className="flex items-center justify-center space-x-2 px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={onAnalyze}
+          disabled={isLoading}
+          className="flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-brand-purple to-indigo-600 hover:from-brand-purple/90 hover:to-indigo-600/90 text-white font-semibold rounded-md transition-all shadow-md hover:shadow-lg hover:shadow-brand-purple/20 disabled:from-gray-500 disabled:to-gray-600 disabled:shadow-none"
         >
-          <AnalyzeIcon className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>{isLoading ? 'Analyzing...' : 'Analyze Code'}</span>
+          <AnalyzeIcon className="w-5 h-5" />
+          {isLoading ? t('analyzingButton') : t('analyzeButton')}
         </button>
       </div>
     </div>

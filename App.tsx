@@ -3,32 +3,31 @@ import Header from './components/Header';
 import CodeInput from './components/CodeInput';
 import AnalysisDisplay from './components/AnalysisDisplay';
 import Loader from './components/Loader';
-import { analyzeCode } from './services/geminiService';
-import { GeminiServiceError } from './services/geminiService';
-import type { AnalysisResult, AppError, HistoryEntry } from './types';
-import { useHistory } from './components/history/HistoryProvider';
 import HistorySidebar from './components/history/HistorySidebar';
+import SettingsModal from './components/SettingsModal';
+import { analyzeCode, GeminiServiceError } from './services/geminiService';
+import { useHistory } from './components/history/HistoryProvider';
+import { useSettings } from './contexts/SettingsContext';
+import type { AnalysisResult, AppError, HistoryEntry } from './types';
 
-const App: React.FC = () => {
+function App() {
+  const [code, setCode] = useState<string>('');
+  const [fileName, setFileName] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<AppError | null>(null);
-  const [code, setCode] = useState<string>('');
-  const [fileName, setFileName] = useState<string | null>(null);
+
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const { addHistoryEntry } = useHistory();
-
-  const handleCodeChange = (newCode: string, newFileName: string | null) => {
-    setCode(newCode);
-    setFileName(newFileName);
-  };
+  const { t, language } = useSettings();
 
   const handleAnalyze = useCallback(async () => {
     if (!code.trim()) {
       setError({
-        title: 'Input Missing',
-        message: 'Please enter some code or upload a file to analyze.'
+        title: t('errorInputMissingTitle'),
+        message: t('errorInputMissingMessage'),
       });
       return;
     }
@@ -38,107 +37,113 @@ const App: React.FC = () => {
     setAnalysisResult(null);
 
     try {
-      const result = await analyzeCode(code);
+      const result = await analyzeCode(code, language);
       setAnalysisResult(result);
-      
       addHistoryEntry({
-        title: fileName || `Analysis of ${code.substring(0, 40).split('\n')[0]}...`,
+        title: fileName || `${t('analysisResultTitlePrefix')} ${new Date().toLocaleString()}`,
         code,
         result,
       });
-
-    } catch (err) {
-      console.error('Analysis failed:', err);
-
-      if (err instanceof GeminiServiceError) {
-        if (/API key/i.test(err.message)) {
-          setError({ title: 'Authentication Error', message: err.message });
-        } else if (/network|fetch/i.test(err.message)) {
-          setError({ title: 'Network Error', message: err.message });
-        } else if (/parse|format|missing fields/i.test(err.message)) {
-          setError({ title: 'Invalid Response', message: err.message });
-        } else {
-          setError({ title: 'Analysis Error', message: err.message });
-        }
+    } catch (e) {
+      if (e instanceof GeminiServiceError) {
+         if (e.message.includes('API key is not valid')) {
+            setError({ title: t('errorAuthTitle'), message: e.message });
+         } else if (e.message.includes('network error')) {
+            setError({ title: t('errorNetworkTitle'), message: e.message });
+         } else if (e.message.includes('Failed to parse')) {
+            setError({ title: t('errorInvalidResponseTitle'), message: e.message });
+         } else {
+            setError({ title: t('errorAnalysisTitle'), message: e.message });
+         }
       } else {
         setError({
-          title: 'An Unexpected Error Occurred',
-          message: err instanceof Error ? err.message : 'Please check the console for more details.'
+          title: t('errorUnexpectedTitle'),
+          message: `${t('errorUnexpectedMessage')} ${e instanceof Error ? e.message : ''}`,
         });
+        console.error(e);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [code, fileName, addHistoryEntry]);
+  }, [code, language, addHistoryEntry, fileName, t]);
 
-  const handleSelectHistoryEntry = (entry: HistoryEntry) => {
-    setCode(entry.code);
-    setFileName(entry.title.startsWith('Analysis of') ? null : entry.title);
-    setAnalysisResult(entry.result);
+  const handleFileLoad = (fileContent: string, name: string) => {
+    setCode(fileContent);
+    setFileName(name);
+    setAnalysisResult(null);
     setError(null);
-    setIsLoading(false);
   };
 
-  const toggleHistory = useCallback(() => setIsHistoryOpen(prev => !prev), []);
+  const handleClear = () => {
+    setCode('');
+    setFileName(null);
+    setAnalysisResult(null);
+    setError(null);
+  };
+  
+  const handleHistorySelect = (entry: HistoryEntry) => {
+    setCode(entry.code);
+    setAnalysisResult(entry.result);
+    setFileName(entry.title.startsWith(t('analysisResultTitlePrefix')) ? null : entry.title);
+    setError(null);
+    setIsHistoryOpen(false);
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'h') {
+      if (event.ctrlKey && event.key === 'h') {
         event.preventDefault();
-        toggleHistory();
+        setIsHistoryOpen(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [toggleHistory]);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
 
   return (
-    <div className="relative min-h-screen bg-gray-900 text-gray-200 font-sans overflow-x-hidden">
-      <HistorySidebar
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelectEntry={handleSelectHistoryEntry}
+    <div className="flex flex-col h-screen font-sans">
+      <Header
+        onToggleHistory={() => setIsHistoryOpen(true)}
+        onToggleSettings={() => setIsSettingsOpen(true)}
       />
-      <div className={`transition-transform duration-300 ease-in-out ${isHistoryOpen ? 'sm:translate-x-80' : ''}`}>
-        <Header onToggleHistory={toggleHistory} />
-        <main className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-center text-gray-400 mb-8">
-              Paste your code or upload a file below. Our AI will analyze it for bugs, suggest logging improvements, and summarize its features.
-            </p>
+      <main className="flex-grow container mx-auto p-4 flex flex-col gap-6 overflow-y-auto">
+        <div className="text-center mt-4">
+            <p className="text-gray-400 max-w-2xl mx-auto">{t('appDescription')}</p>
+        </div>
 
-            <CodeInput
-              code={code}
-              fileName={fileName}
-              onCodeChange={handleCodeChange}
-              onAnalyze={handleAnalyze}
-              isLoading={isLoading}
-            />
+        {error && (
+            <div 
+              className="bg-red-500/10 backdrop-blur-sm border border-red-500/30 text-red-300 p-4 rounded-lg shadow-lg" 
+              role="alert"
+            >
+                <p className="font-bold text-red-200">{error.title}</p>
+                <p>{error.message}</p>
+            </div>
+        )}
 
-            {error && (
-              <div className="mt-6 bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg" role="alert">
-                <strong className="font-bold block text-red-100 mb-1">{error.title}</strong>
-                <span className="block sm:inline">{error.message}</span>
-              </div>
-            )}
+        <CodeInput
+          code={code}
+          setCode={setCode}
+          onAnalyze={handleAnalyze}
+          isLoading={isLoading}
+          fileName={fileName}
+          onFileLoad={handleFileLoad}
+          onClear={handleClear}
+        />
+        
+        {isLoading && <Loader />}
+        
+        {analysisResult && <AnalysisDisplay result={analysisResult} />}
 
-            {isLoading && <Loader />}
-
-            {analysisResult && !isLoading && (
-              <div className="mt-8">
-                <AnalysisDisplay result={analysisResult} />
-              </div>
-            )}
-          </div>
-        </main>
-        <footer className="text-center py-6 text-gray-500 text-sm">
-          <p>Powered by Google Gemini. Built by a world-class senior frontend React engineer.</p>
-        </footer>
-      </div>
+      </main>
+      <footer className="text-center p-4 text-sm text-gray-500 border-t border-white/10">
+        {t('footerText')}
+      </footer>
+      <HistorySidebar isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} onSelect={handleHistorySelect} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
-};
+}
 
 export default App;

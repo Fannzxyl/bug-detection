@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { AnalysisResult, DiscoveredFeature } from '../types';
+import type { AnalysisResult } from '../types';
 
 // Custom error for service-specific issues to be caught by the UI
 export class GeminiServiceError extends Error {
@@ -17,6 +17,8 @@ if (!API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
+// Schema descriptions are for the model's structural understanding and can remain in English.
+// The natural language instruction in the prompt will handle the localization of the content.
 const analysisSchema = {
   type: Type.OBJECT,
   properties: {
@@ -96,14 +98,20 @@ const analysisSchema = {
 };
 
 
-export const analyzeCode = async (code: string): Promise<AnalysisResult> => {
+export const analyzeCode = async (code: string, language: 'en' | 'id'): Promise<AnalysisResult> => {
   try {
+    const languageInstruction = language === 'id'
+      ? 'PENTING: Berikan semua deskripsi, saran, tingkat keparahan, nama fitur, dan semua string lain yang akan dilihat pengguna dalam Bahasa Indonesia.'
+      : 'IMPORTANT: Provide all descriptions, suggestions, severities, feature names, and any other user-facing strings in English.';
+
     const prompt = `
       Analyze the following code snippet. Your analysis should have three parts:
       1.  Identify potential bugs or logical errors.
       2.  Suggest improvements for logging.
       3.  Perform a detailed feature discovery.
       
+      ${languageInstruction}
+
       **Feature Discovery Rules:**
       Your goal is to identify and catalog all features or modules implied in the codebase.
       - **Heuristics**: Look for UI routes (e.g., React Router), UI elements (headings, buttons), API endpoints (e.g., app.get('/api/...')), data models/schemas, and domain-specific keywords in names and strings.

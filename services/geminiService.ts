@@ -56,22 +56,22 @@ const analysisSchema = {
           ui: {
             type: Type.OBJECT,
             properties: {
-              routes: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Associated UI routes (e.g., '/settings/profile')." },
-              components: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Key UI components involved." },
+              routes: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Associated UI routes (e.g., '/settings/profile'). For non-web apps, this can be empty." },
+              components: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Key UI components involved. For non-web apps, this can be empty." },
             },
             required: ["routes", "components"]
           },
           api: {
             type: Type.OBJECT,
             properties: {
-              endpoints: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Associated API endpoints (e.g., 'GET /api/users/:id')." },
+              endpoints: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Associated API endpoints (e.g., 'GET /api/users/:id') or public functions/methods for libraries." },
             },
              required: ["endpoints"]
           },
           data: {
             type: Type.OBJECT,
             properties: {
-              models: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Data models or database tables related to this feature." },
+              models: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Data models, classes, or database tables related to this feature." },
             },
              required: ["models"]
           },
@@ -101,18 +101,20 @@ export const analyzeCode = async (code: string, language: 'en' | 'id'): Promise<
       : 'IMPORTANT: Provide all descriptions, suggestions, severities, feature names, and any other user-facing strings in English.';
 
     const prompt = `
-      Analyze the following code snippet. Your analysis should have three parts:
-      1.  Identify potential bugs or logical errors.
-      2.  Suggest improvements for logging.
-      3.  Perform a detailed feature discovery.
+      As an expert polyglot software engineer, first, automatically identify the programming language of the code snippet provided below.
+
+      Then, based on the identified language, conduct a comprehensive analysis with three parts:
+      1.  **Potential Bugs:** Identify potential bugs, logical errors, or deviations from language-specific best practices.
+      2.  **Logging Suggestions:** Suggest improvements for logging to enhance observability and debugging, following conventions for that language.
+      3.  **Feature Discovery:** Catalog the high-level features or modules within the code.
       
       ${languageInstruction}
 
-      **Feature Discovery Rules:**
-      Your goal is to identify and catalog all features or modules implied in the codebase.
-      - **Heuristics**: Look for UI routes (e.g., React Router), UI elements (headings, buttons), API endpoints (e.g., app.get('/api/...')), data models/schemas, and domain-specific keywords in names and strings.
-      - **Status**: Mark a feature 'implemented' if you see strong evidence (like both UI and API logic). Mark it 'partial' if key parts are missing. Mark it 'stub' if it's just a placeholder or comment.
-      - **Risks**: Identify potential issues like missing authentication or lack of input validation.
+      **Feature Discovery Rules (Adapt to the Language):**
+      - **Goal**: Identify and catalog all features, modules, or key components.
+      - **Heuristics**: Look for architectural patterns, primary classes, public functions, data structures/models, and domain-specific keywords. For web applications, this includes UI routes and API endpoints. For libraries, it includes the public API. For standalone scripts, it includes the main execution blocks.
+      - **Status**: Mark a feature 'implemented' if it seems complete, 'partial' if key parts are missing, or 'stub' if it's just a placeholder.
+      - **Risks**: Identify potential issues like missing error handling, security vulnerabilities (e.g., lack of input validation), or performance bottlenecks.
       - **Evidence**: Quote a brief snippet of code that proves the feature's existence.
 
       Provide your complete analysis in the specified JSON format. If no items are found for a category (bugs, logs, or features), return an empty array for that key.

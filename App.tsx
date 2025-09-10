@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import Interpreter from 'js-interpreter';
+import Interpreter from 'https://esm.sh/js-interpreter@1.4.1';
 import Header from './components/Header';
 import CodeInput from './components/CodeInput';
 import AnalysisDisplay from './components/AnalysisDisplay';

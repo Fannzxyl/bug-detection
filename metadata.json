@@ -1,0 +1,5 @@
+{
+  "name": "Gemini Bug Detector",
+  "description": "An intelligent code analysis tool powered by Gemini. Paste your code or upload a file to detect bugs, get logging suggestions, and identify key features within your codebase.",
+  "requestFramePermissions": []
+}

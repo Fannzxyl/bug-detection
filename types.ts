@@ -46,3 +46,12 @@ export interface HistoryEntry {
   code: string;
   result: AnalysisResult;
 }
+
+// --- New types for the debugger ---
+export interface DebuggerState {
+  isPaused: boolean;
+  scope: any | null; // The scope object from JS-Interpreter
+  activeLine: number;
+  consoleOutput: string[];
+  isFinished: boolean;
+}

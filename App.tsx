@@ -5,32 +5,82 @@ import AnalysisDisplay from './components/AnalysisDisplay';
 import Loader from './components/Loader';
 import HistorySidebar from './components/history/HistorySidebar';
 import SettingsModal from './components/SettingsModal';
+import DebuggerPanel from './components/DebuggerPanel';
 import { analyzeCode, GeminiServiceError } from './services/geminiService';
+import type { AnalysisResult, AppError, HistoryEntry, DebuggerState } from './types';
 import { useHistory } from './components/history/HistoryProvider';
 import { useSettings } from './contexts/SettingsContext';
-import type { AnalysisResult, AppError, HistoryEntry } from './types';
+
+// A simple component to display errors
+const ErrorDisplay: React.FC<{ error: AppError; onDismiss: () => void }> = ({ error, onDismiss }) => {
+    const { t } = useSettings();
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+            <div className="bg-red-900/80 backdrop-blur-md border border-red-500 text-white rounded-lg shadow-2xl max-w-lg w-full">
+                <div className="p-6">
+                    <h2 className="text-xl font-bold mb-2 text-red-300">{error.title || t('errorTitle')}</h2>
+                    <p className="text-red-200">{error.message}</p>
+                </div>
+                <div className="px-6 py-3 bg-black/30 text-right">
+                    <button onClick={onDismiss} className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-md font-semibold transition-colors">
+                        {t('errorDismiss')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const DEFAULT_CODE = `// Welcome to the Gemini Code Inspector!
+// Paste your code here, upload a file, or use this example.
+// Then, press "Analyze Code" or Ctrl+Enter.
+
+function calculateTotal(items) {
+  let total = 0;
+  items.forEach(item => {
+    // BUG: This should be multiplication, not addition
+    total = item.price + item.quantity; 
+  });
+  return total;
+}
+
+// FEATURE: A simple REST API endpoint using express
+import express from 'express';
+const app = express();
+
+app.get('/api/users', (req, res) => {
+  // LOG_SUGGESTION: Should log when this endpoint is hit
+  // RISK: No authentication or validation
+  const users = [{ id: 1, name: 'John Doe' }];
+  res.json(users);
+});
+`;
 
 function App() {
-  const [code, setCode] = useState<string>('');
+  const { language } = useSettings();
+  const { addHistoryEntry } = useHistory();
+  const [code, setCode] = useState<string>(DEFAULT_CODE);
   const [fileName, setFileName] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<AppError | null>(null);
 
-  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-
-  const { addHistoryEntry } = useHistory();
-  const { t, language } = useSettings();
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // Debugger state
+  const [isDebugging, setIsDebugging] = useState(false);
+  const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
+  const [debuggerState, setDebuggerState] = useState<DebuggerState>({
+      isPaused: false,
+      scope: null,
+      activeLine: -1,
+      consoleOutput: [],
+      isFinished: false,
+  });
 
   const handleAnalyze = useCallback(async () => {
-    if (!code.trim()) {
-      setError({
-        title: t('errorInputMissingTitle'),
-        message: t('errorInputMissingMessage'),
-      });
-      return;
-    }
+    if (!code.trim()) return;
 
     setIsLoading(true);
     setError(null);
@@ -40,108 +90,137 @@ function App() {
       const result = await analyzeCode(code, language);
       setAnalysisResult(result);
       addHistoryEntry({
-        title: fileName || `${t('analysisResultTitlePrefix')} ${new Date().toLocaleString()}`,
+        title: fileName || `Analysis of ${code.slice(0, 30)}...`,
         code,
         result,
       });
     } catch (e) {
       if (e instanceof GeminiServiceError) {
-         if (e.message.includes('API key is not valid')) {
-            setError({ title: t('errorAuthTitle'), message: e.message });
-         } else if (e.message.includes('network error')) {
-            setError({ title: t('errorNetworkTitle'), message: e.message });
-         } else if (e.message.includes('Failed to parse')) {
-            setError({ title: t('errorInvalidResponseTitle'), message: e.message });
-         } else {
-            setError({ title: t('errorAnalysisTitle'), message: e.message });
-         }
+        setError({ title: 'Analysis Failed', message: e.message });
+      } else if (e instanceof Error) {
+        setError({ title: 'An Unexpected Error Occurred', message: e.message });
       } else {
-        setError({
-          title: t('errorUnexpectedTitle'),
-          message: `${t('errorUnexpectedMessage')} ${e instanceof Error ? e.message : ''}`,
-        });
-        console.error(e);
+        setError({ title: 'An Unknown Error Occurred', message: String(e) });
       }
     } finally {
       setIsLoading(false);
     }
-  }, [code, language, addHistoryEntry, fileName, t]);
-
-  const handleFileLoad = (fileContent: string, name: string) => {
-    setCode(fileContent);
-    setFileName(name);
-    setAnalysisResult(null);
-    setError(null);
+  }, [code, language, addHistoryEntry, fileName]);
+  
+  const handleDebug = () => {
+    // Placeholder for actual debugging logic
+    setIsDebugging(true);
+    setAnalysisResult(null); // Clear analysis results when debugging
+    setDebuggerState({
+      isPaused: true,
+      scope: { message: "Debugger is not fully implemented.", advice: "This is a UI placeholder." },
+      activeLine: 5, // Example line
+      consoleOutput: ["Debugger started.", "Execution paused at breakpoint on line 5."],
+      isFinished: false,
+    });
+  };
+  
+  const handleStopDebug = () => {
+      setIsDebugging(false);
+      // Reset debugger state
+      setDebuggerState({
+          isPaused: false, scope: null, activeLine: -1, consoleOutput: [], isFinished: false
+      });
   };
 
+  const handleToggleBreakpoint = (line: number) => {
+      setBreakpoints(prev => {
+          const newBreakpoints = new Set(prev);
+          if (newBreakpoints.has(line)) {
+              newBreakpoints.delete(line);
+          } else {
+              newBreakpoints.add(line);
+          }
+          return newBreakpoints;
+      });
+  };
+
+  const handleFileLoad = (content: string, name: string) => {
+    setCode(content);
+    setFileName(name);
+    setAnalysisResult(null);
+  };
+  
   const handleClear = () => {
     setCode('');
     setFileName(null);
     setAnalysisResult(null);
     setError(null);
   };
-  
-  const handleHistorySelect = (entry: HistoryEntry) => {
+
+  const handleSelectHistory = useCallback((entry: HistoryEntry) => {
     setCode(entry.code);
     setAnalysisResult(entry.result);
-    setFileName(entry.title.startsWith(t('analysisResultTitlePrefix')) ? null : entry.title);
-    setError(null);
+    setFileName(entry.title.startsWith('Analysis of') ? null : entry.title);
     setIsHistoryOpen(false);
-  };
-
+    setError(null);
+    if(isDebugging) handleStopDebug();
+  }, [isDebugging]);
+  
+  // Keyboard shortcut for closing modals
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key === 'h') {
-        event.preventDefault();
-        setIsHistoryOpen(prev => !prev);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isHistoryOpen) setIsHistoryOpen(false);
+        if (isSettingsOpen) setIsSettingsOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
+  }, [isHistoryOpen, isSettingsOpen]);
 
   return (
-    <div className="flex flex-col h-screen font-sans">
+    <div className="bg-gray-900 text-gray-200 min-h-screen font-sans">
       <Header
-        onToggleHistory={() => setIsHistoryOpen(true)}
-        onToggleSettings={() => setIsSettingsOpen(true)}
+        onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)}
+        onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
       />
-      <main className="flex-grow container mx-auto p-4 flex flex-col gap-6 overflow-y-auto">
-        <div className="text-center mt-4">
-            <p className="text-gray-400 max-w-2xl mx-auto">{t('appDescription')}</p>
-        </div>
 
-        {error && (
-            <div 
-              className="bg-red-500/10 backdrop-blur-sm border border-red-500/30 text-red-300 p-4 rounded-lg shadow-lg" 
-              role="alert"
-            >
-                <p className="font-bold text-red-200">{error.title}</p>
-                <p>{error.message}</p>
-            </div>
-        )}
-
+      <main className="container mx-auto p-4 sm:p-6 space-y-6">
         <CodeInput
           code={code}
           setCode={setCode}
           onAnalyze={handleAnalyze}
+          onDebug={handleDebug}
           isLoading={isLoading}
           fileName={fileName}
           onFileLoad={handleFileLoad}
           onClear={handleClear}
+          isDebugging={isDebugging}
+          breakpoints={breakpoints}
+          onToggleBreakpoint={handleToggleBreakpoint}
+          activeLine={debuggerState.activeLine}
         />
-        
-        {isLoading && <Loader />}
-        
-        {analysisResult && <AnalysisDisplay result={analysisResult} />}
 
+        {isDebugging && (
+            <DebuggerPanel 
+                state={debuggerState}
+                onContinue={() => alert('Continue clicked (not implemented)')}
+                onStep={() => alert('Step Over clicked (not implemented)')}
+                onStop={handleStopDebug}
+            />
+        )}
+
+        {isLoading && <Loader />}
+        {error && <ErrorDisplay error={error} onDismiss={() => setError(null)} />}
+        
+        {analysisResult && !isDebugging && <AnalysisDisplay result={analysisResult} />}
       </main>
-      <footer className="text-center p-4 text-sm text-gray-500 border-t border-white/10">
-        {t('footerText')}
-      </footer>
-      <HistorySidebar isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} onSelect={handleHistorySelect} />
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
+      <HistorySidebar
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onSelect={handleSelectHistory}
+      />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }

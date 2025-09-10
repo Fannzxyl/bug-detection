@@ -9,13 +9,9 @@ export class GeminiServiceError extends Error {
   }
 }
 
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-    throw new Error("CRITICAL: API_KEY environment variable not set. The application cannot start.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// FIX: Initialize with process.env.API_KEY directly and remove manual check.
+// The environment variable is assumed to be configured and valid.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Schema descriptions are for the model's structural understanding and can remain in English.
 // The natural language instruction in the prompt will handle the localization of the content.

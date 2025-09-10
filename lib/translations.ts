@@ -1,143 +1,136 @@
 export const translations = {
   en: {
     // Header
-    headerTitle: 'Gemini Bug Detector',
+    headerTitle: 'Gemini Code Inspector',
     historyButton: 'History',
-    historyButtonTooltip: 'Toggle History (Ctrl+H)',
-    settingsButton: 'Settings',
-    settingsButtonTooltip: 'Open Settings',
-
-    // App Description
-    appDescription: 'Paste your code or upload a file below. Our AI will analyze it for bugs, suggest logging improvements, and summarize its features.',
-    footerText: 'Powered by Google Gemini. Built by a world-class senior frontend React engineer.',
+    historyButtonTooltip: 'View analysis history',
+    settingsButtonTooltip: 'Open settings',
 
     // Code Input
     codeInputPlaceholder: 'Paste your code here... (Ctrl+Enter to analyze)',
     uploadFileButton: 'Upload File',
-    clearInputButton: 'Clear Input',
+    clearInputButton: 'Clear',
+    debugButton: 'Debug',
     analyzeButton: 'Analyze Code',
     analyzingButton: 'Analyzing...',
-    loadedFromFile: 'Loaded from',
-    fileReadError: 'Error reading file',
-
-    // Loader
-    loaderTitle: 'AI is analyzing your code...',
-    loaderSubtitle: 'This may take a moment.',
+    loadedFromFile: 'Loaded',
+    fileReadError: 'Error reading file.',
 
     // Analysis Display
-    bugsCardTitle: 'Bugs Detected',
+    bugsCardTitle: 'Potential Bugs',
+    noBugsDetected: 'No potential bugs were detected.',
     logsCardTitle: 'Logging Suggestions',
-    featuresCardTitle: 'Feature Discovery',
-    copyResultsButton: 'Copy results to clipboard',
-    copyBugButton: 'Copy bug details',
-    copyButton: 'Copy',
+    noLogSuggestions: 'No specific logging suggestions were found.',
+    featuresCardTitle: 'Discovered Features',
+    noFeaturesFound: 'No distinct features could be identified from the code.',
+    copyResultsButton: 'Copy All Results',
     copiedButton: 'Copied!',
+    copyButton: 'Copy',
     lineLabel: 'Line',
-    noBugsDetected: 'No bugs detected. Great job!',
-    noLogSuggestions: 'No specific logging suggestions at this time.',
-    noFeaturesFound: 'Could not determine specific features from the code.',
+    copyBugButton: 'Copy bug details',
     potentialRisksLabel: 'Potential Risks',
     evidenceLabel: 'Evidence',
+    bugsCountTooltip: '{{count}} bugs found',
     
+    // Loader
+    loaderTitle: 'Analyzing Code',
+    loaderSubtitle: 'The AI is inspecting your code... please wait.',
+
     // History Sidebar
     historyTitle: 'Analysis History',
-    historyCloseLabel: 'Close history sidebar',
-    historySearchPlaceholder: 'Search history...',
+    historyCloseLabel: 'Close history',
+    historySearchPlaceholder: 'Search by title or code...',
+    historyNoSearchResults: 'No matching history found.',
+    historyNoItemsTitle: 'History is Empty',
+    historyNoItemsSubtitle: 'Your past analyses will appear here.',
     historyImportButton: 'Import',
     historyExportButton: 'Export',
-    historyClearButton: 'Clear',
-    historyNoItemsTitle: 'No History Found',
-    historyNoItemsSubtitle: 'Your analysis history will appear here.',
-    historyNoSearchResults: 'No results match your search.',
-    bugsCountTooltip: '{{count}} bugs',
-    
+    historyClearButton: 'Clear All',
+    alertNoHistoryToExport: 'There is no history to export.',
+    alertImportInvalidJSON: 'Import failed: The file contains invalid JSON.',
+
     // Settings Modal
     settingsTitle: 'Settings',
     settingsCloseLabel: 'Close settings',
-    languageLabel: 'Language',
+    languageLabel: 'Display Language',
 
-    // Alerts and Errors
-    alertNoHistoryToExport: 'There is no history to export.',
-    alertImportInvalidJSON: 'Import failed: The file is not valid JSON.',
-    errorInputMissingTitle: 'Input Missing',
-    errorInputMissingMessage: 'Please enter some code or upload a file to analyze.',
-    errorAuthTitle: 'Authentication Error',
-    errorNetworkTitle: 'Network Error',
-    errorInvalidResponseTitle: 'Invalid Response',
-    errorAnalysisTitle: 'Analysis Error',
-    errorUnexpectedTitle: 'An Unexpected Error Occurred',
-    errorUnexpectedMessage: 'Please check the console for more details.',
-    analysisResultTitlePrefix: 'Analysis of',
+    // Error Display
+    errorTitle: 'An Error Occurred',
+    errorDismiss: 'Dismiss',
 
+    // Debugger Panel
+    debuggerTitle: 'Debugger',
+    debuggerScope: 'Scope',
+    debuggerConsole: 'Console',
+    debuggerContinue: 'Continue',
+    debuggerStepOver: 'Step Over',
+    debuggerStop: 'Stop',
   },
   id: {
     // Header
-    headerTitle: 'Detektor Bug Gemini',
+    headerTitle: 'Inspektur Kode Gemini',
     historyButton: 'Riwayat',
-    historyButtonTooltip: 'Buka/Tutup Riwayat (Ctrl+H)',
-    settingsButton: 'Pengaturan',
-    settingsButtonTooltip: 'Buka Pengaturan',
+    historyButtonTooltip: 'Lihat riwayat analisis',
+    settingsButtonTooltip: 'Buka pengaturan',
 
-    // App Description
-    appDescription: 'Tempel kode Anda atau unggah file di bawah ini. AI kami akan menganalisisnya untuk mencari bug, menyarankan perbaikan logging, dan merangkum fiturnya.',
-    footerText: 'Didukung oleh Google Gemini. Dibuat oleh seorang insinyur frontend React senior kelas dunia.',
-    
     // Code Input
-    codeInputPlaceholder: 'Tempel kode Anda di sini... (Ctrl+Enter untuk menganalisis)',
+    codeInputPlaceholder: 'Tempelkan kode Anda di sini... (Ctrl+Enter untuk menganalisis)',
     uploadFileButton: 'Unggah File',
     clearInputButton: 'Bersihkan',
+    debugButton: 'Debug',
     analyzeButton: 'Analisis Kode',
     analyzingButton: 'Menganalisis...',
-    loadedFromFile: 'Dimuat dari',
-    fileReadError: 'Gagal membaca file',
-
-    // Loader
-    loaderTitle: 'AI sedang menganalisis kode Anda...',
-    loaderSubtitle: 'Ini mungkin memakan waktu sejenak.',
+    loadedFromFile: 'Dimuat',
+    fileReadError: 'Gagal membaca file.',
 
     // Analysis Display
-    bugsCardTitle: 'Bug Terdeteksi',
+    bugsCardTitle: 'Potensi Bug',
+    noBugsDetected: 'Tidak ada potensi bug yang terdeteksi.',
     logsCardTitle: 'Saran Logging',
-    featuresCardTitle: 'Penemuan Fitur',
-    copyResultsButton: 'Salin hasil ke clipboard',
-    copyBugButton: 'Salin detail bug',
-    copyButton: 'Salin',
+    noLogSuggestions: 'Tidak ditemukan saran logging spesifik.',
+    featuresCardTitle: 'Fitur yang Ditemukan',
+    noFeaturesFound: 'Tidak ada fitur khusus yang dapat diidentifikasi dari kode.',
+    copyResultsButton: 'Salin Semua Hasil',
     copiedButton: 'Tersalin!',
+    copyButton: 'Salin',
     lineLabel: 'Baris',
-    noBugsDetected: 'Tidak ada bug yang terdeteksi. Kerja bagus!',
-    noLogSuggestions: 'Tidak ada saran logging khusus saat ini.',
-    noFeaturesFound: 'Tidak dapat menentukan fitur spesifik dari kode.',
+    copyBugButton: 'Salin detail bug',
     potentialRisksLabel: 'Risiko Potensial',
     evidenceLabel: 'Bukti',
+    bugsCountTooltip: '{{count}} bug ditemukan',
+
+    // Loader
+    loaderTitle: 'Menganalisis Kode',
+    loaderSubtitle: 'AI sedang memeriksa kode Anda... harap tunggu.',
 
     // History Sidebar
     historyTitle: 'Riwayat Analisis',
-    historyCloseLabel: 'Tutup sidebar riwayat',
-    historySearchPlaceholder: 'Cari riwayat...',
+    historyCloseLabel: 'Tutup riwayat',
+    historySearchPlaceholder: 'Cari berdasarkan judul atau kode...',
+    historyNoSearchResults: 'Tidak ada riwayat yang cocok ditemukan.',
+    historyNoItemsTitle: 'Riwayat Kosong',
+    historyNoItemsSubtitle: 'Analisis Anda sebelumnya akan muncul di sini.',
     historyImportButton: 'Impor',
     historyExportButton: 'Ekspor',
-    historyClearButton: 'Hapus',
-    historyNoItemsTitle: 'Tidak Ada Riwayat',
-    historyNoItemsSubtitle: 'Riwayat analisis Anda akan muncul di sini.',
-    historyNoSearchResults: 'Tidak ada hasil yang cocok dengan pencarian Anda.',
-    bugsCountTooltip: '{{count}} bug',
-    
+    historyClearButton: 'Bersihkan Semua',
+    alertNoHistoryToExport: 'Tidak ada riwayat untuk diekspor.',
+    alertImportInvalidJSON: 'Impor gagal: File berisi JSON yang tidak valid.',
+
     // Settings Modal
     settingsTitle: 'Pengaturan',
     settingsCloseLabel: 'Tutup pengaturan',
-    languageLabel: 'Bahasa',
+    languageLabel: 'Bahasa Tampilan',
 
-    // Alerts and Errors
-    alertNoHistoryToExport: 'Tidak ada riwayat untuk diekspor.',
-    alertImportInvalidJSON: 'Impor gagal: File bukan JSON yang valid.',
-    errorInputMissingTitle: 'Input Kosong',
-    errorInputMissingMessage: 'Silakan masukkan kode atau unggah file untuk dianalisis.',
-    errorAuthTitle: 'Kesalahan Otentikasi',
-    errorNetworkTitle: 'Kesalahan Jaringan',
-    errorInvalidResponseTitle: 'Respons Tidak Valid',
-    errorAnalysisTitle: 'Kesalahan Analisis',
-    errorUnexpectedTitle: 'Terjadi Kesalahan Tak Terduga',
-    errorUnexpectedMessage: 'Silakan periksa konsol untuk detail lebih lanjut.',
-    analysisResultTitlePrefix: 'Analisis dari',
+    // Error Display
+    errorTitle: 'Terjadi Kesalahan',
+    errorDismiss: 'Tutup',
+
+    // Debugger Panel
+    debuggerTitle: 'Debugger',
+    debuggerScope: 'Lingkup',
+    debuggerConsole: 'Konsol',
+    debuggerContinue: 'Lanjutkan',
+    debuggerStepOver: 'Langkahi',
+    debuggerStop: 'Hentikan',
   },
 };

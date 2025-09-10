@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { AnalysisResult } from '../types';
+import type { AnalysisResult, DiscoveredFeature } from '../types';
 
 // Custom error for service-specific issues to be caught by the UI
 export class GeminiServiceError extends Error {
@@ -26,18 +26,9 @@ const analysisSchema = {
       items: {
         type: Type.OBJECT,
         properties: {
-          line: {
-            type: Type.NUMBER,
-            description: "The line number where the bug is located."
-          },
-          description: {
-            type: Type.STRING,
-            description: "A clear description of the bug and why it's a problem."
-          },
-          severity: {
-            type: Type.STRING,
-            description: "The severity of the bug (e.g., Critical, High, Medium, Low, Info)."
-          }
+          line: { type: Type.NUMBER, description: "The line number where the bug is located." },
+          description: { type: Type.STRING, description: "A clear description of the bug and why it's a problem." },
+          severity: { type: Type.STRING, description: "The severity of the bug (e.g., Critical, High, Medium, Low, Info)." }
         },
         required: ["line", "description", "severity"]
       }
@@ -48,24 +39,56 @@ const analysisSchema = {
       items: {
         type: Type.OBJECT,
         properties: {
-          line: {
-            type: Type.NUMBER,
-            description: "The line number where a log could be added or improved."
-          },
-          suggestion: {
-            type: Type.STRING,
-            description: "A specific suggestion for what to log and why."
-          }
+          line: { type: Type.NUMBER, description: "The line number where a log could be added or improved." },
+          suggestion: { type: Type.STRING, description: "A specific suggestion for what to log and why." }
         },
         required: ["line", "suggestion"]
       }
     },
     features: {
       type: Type.ARRAY,
-      description: "A high-level summary of the features implemented in the code.",
+      description: "A detailed catalog of features implemented or implied in the code, following specific heuristics.",
       items: {
-        type: Type.STRING,
-        description: "A single feature description."
+        type: Type.OBJECT,
+        properties: {
+          featureId: { type: Type.STRING, description: "A short, machine-readable ID for the feature (e.g., 'userAuth', 'itemUom')." },
+          name: { type: Type.STRING, description: "A human-readable name for the feature (e.g., 'User Authentication')." },
+          status: { type: Type.STRING, description: "The implementation status: 'implemented' (fully present), 'partial' (some parts missing), or 'stub' (placeholder)." },
+          description: { type: Type.STRING, description: "A brief summary of what the feature does." },
+          ui: {
+            type: Type.OBJECT,
+            properties: {
+              routes: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Associated UI routes (e.g., '/settings/profile')." },
+              components: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Key UI components involved." },
+            },
+            required: ["routes", "components"]
+          },
+          api: {
+            type: Type.OBJECT,
+            properties: {
+              endpoints: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Associated API endpoints (e.g., 'GET /api/users/:id')." },
+            },
+             required: ["endpoints"]
+          },
+          data: {
+            type: Type.OBJECT,
+            properties: {
+              models: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Data models or database tables related to this feature." },
+            },
+             required: ["models"]
+          },
+          risks: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "Potential risks or implementation gaps, like missing validation or security checks."
+          },
+          evidence: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "Specific lines of code or artifacts that justify the feature's existence."
+          }
+        },
+        required: ["featureId", "name", "status", "description", "ui", "api", "data", "risks", "evidence"]
       }
     }
   },
@@ -76,8 +99,19 @@ const analysisSchema = {
 export const analyzeCode = async (code: string): Promise<AnalysisResult> => {
   try {
     const prompt = `
-      Analyze the following code snippet. Identify potential bugs, suggest improvements for logging, and summarize the key features.
-      Provide your analysis in the specified JSON format. If no bugs, logs, or features are found, return an empty array for the respective key.
+      Analyze the following code snippet. Your analysis should have three parts:
+      1.  Identify potential bugs or logical errors.
+      2.  Suggest improvements for logging.
+      3.  Perform a detailed feature discovery.
+      
+      **Feature Discovery Rules:**
+      Your goal is to identify and catalog all features or modules implied in the codebase.
+      - **Heuristics**: Look for UI routes (e.g., React Router), UI elements (headings, buttons), API endpoints (e.g., app.get('/api/...')), data models/schemas, and domain-specific keywords in names and strings.
+      - **Status**: Mark a feature 'implemented' if you see strong evidence (like both UI and API logic). Mark it 'partial' if key parts are missing. Mark it 'stub' if it's just a placeholder or comment.
+      - **Risks**: Identify potential issues like missing authentication or lack of input validation.
+      - **Evidence**: Quote a brief snippet of code that proves the feature's existence.
+
+      Provide your complete analysis in the specified JSON format. If no items are found for a category (bugs, logs, or features), return an empty array for that key.
 
       Code:
       \`\`\`
@@ -91,7 +125,7 @@ export const analyzeCode = async (code: string): Promise<AnalysisResult> => {
       config: {
         responseMimeType: "application/json",
         responseSchema: analysisSchema,
-        temperature: 0.2,
+        temperature: 0.1,
       },
     });
 

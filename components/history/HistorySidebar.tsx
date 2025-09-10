@@ -79,7 +79,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, onClose, onSele
                 aria-hidden="true"
             />
             <aside
-                className={`fixed top-0 left-0 h-full w-80 bg-gray-800 border-r border-gray-700 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`fixed top-0 left-0 h-full w-full max-w-xs sm:w-80 bg-gray-800 border-r border-gray-700 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="history-heading"

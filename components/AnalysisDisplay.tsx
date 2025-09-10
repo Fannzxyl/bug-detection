@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import type { AnalysisResult, BugReport } from '../types';
+import type { AnalysisResult, BugReport, DiscoveredFeature } from '../types';
 import { BugIcon, LogIcon, FeatureIcon, CopyIcon } from './Icon';
 
 interface AnalysisDisplayProps {
@@ -71,8 +70,43 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ title, icon, children, coun
     );
 };
 
+const getFeatureStatusClass = (status: DiscoveredFeature['status']): string => {
+  switch (status) {
+    case 'implemented': return 'bg-green-800 text-green-200';
+    case 'partial': return 'bg-yellow-800 text-yellow-200';
+    case 'stub': return 'bg-gray-700 text-gray-300';
+    default: return 'bg-gray-700 text-gray-300';
+  }
+};
+
+const FeatureDetailSection: React.FC<{ title: string; items: string[] | undefined }> = ({ title, items }) => {
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="mb-4 last:mb-0">
+      <h4 className="text-sm font-semibold text-gray-400 mb-2 uppercase tracking-wider">{title}</h4>
+      <ul className="list-none m-0 p-0 space-y-1">
+        {items.map((item, i) => (
+          <li key={i} className="bg-gray-900/70 p-2 rounded-md font-mono text-xs text-cyan-300 border border-gray-700">{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 
 const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ result }) => {
+    const [copiedBugIndex, setCopiedBugIndex] = useState<number | null>(null);
+
+    const handleCopyBug = (bug: BugReport, index: number) => {
+        if (copiedBugIndex === index) return;
+        const textToCopy = `Line ${bug.line}: ${bug.description}`;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            setCopiedBugIndex(index);
+            setTimeout(() => setCopiedBugIndex(null), 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    };
     
     const formatBugsForCopy = (bugs: BugReport[]): string => {
         if (!bugs || bugs.length === 0) return "";
@@ -88,11 +122,29 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ result }) => {
         ).join('\n')}`;
     };
 
-    const formatFeaturesForCopy = (features: string[]): string => {
+    const formatFeaturesForCopy = (features: DiscoveredFeature[]): string => {
         if (!features || features.length === 0) return "";
-        return `Feature Summary:\n\n${features.map(feature => 
-            `- ${feature}`
-        ).join('\n')}`;
+
+        const formattedFeatures = features.map(feature => {
+            let content = `## ${feature.name} (${feature.status})\n`;
+            content += `${feature.description}\n\n`;
+
+            const formatSection = (title: string, items: string[] | undefined) => {
+                if (!items || items.length === 0) return '';
+                return `**${title}:**\n${items.map(item => `- ${item}`).join('\n')}\n\n`;
+            };
+            
+            content += formatSection('UI Routes', feature.ui?.routes);
+            content += formatSection('UI Components', feature.ui?.components);
+            content += formatSection('API Endpoints', feature.api?.endpoints);
+            content += formatSection('Data Models', feature.data?.models);
+            content += formatSection('Risks', feature.risks);
+            content += formatSection('Evidence', feature.evidence);
+
+            return content;
+        }).join('\n---\n');
+
+        return `Feature Discovery Summary:\n\n${formattedFeatures}`;
     };
 
   return (
@@ -105,19 +157,34 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ result }) => {
       >
         {result.bugs.length > 0 ? (
           <ul className="space-y-4">
-            {result.bugs.map((bug, index) => (
-              <li key={index} className="p-4 bg-gray-900 rounded-md border border-gray-700">
-                <div className="flex items-start sm:items-center space-x-4 flex-col sm:flex-row">
-                    <div className={`px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap mb-2 sm:mb-0 ${getSeverityClass(bug.severity)}`}>
-                        {bug.severity}
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-gray-300">{bug.description}</p>
-                        <span className="text-xs font-mono text-cyan-400 mt-1 block">Line: {bug.line}</span>
-                    </div>
-                </div>
-              </li>
-            ))}
+            {result.bugs.map((bug, index) => {
+              const isCopied = copiedBugIndex === index;
+              return (
+                <li key={index} className="p-4 bg-gray-900 rounded-md border border-gray-700">
+                  <div className="flex items-start sm:items-center justify-between space-x-4">
+                      <div className="flex-1 flex items-start sm:items-center space-x-4 flex-col sm:flex-row">
+                          <div className={`px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap mb-2 sm:mb-0 ${getSeverityClass(bug.severity)}`}>
+                              {bug.severity}
+                          </div>
+                          <div className="flex-1">
+                              <p className="text-gray-300">{bug.description}</p>
+                              <span className="text-xs font-mono text-cyan-400 mt-1 block">Line: {bug.line}</span>
+                          </div>
+                      </div>
+
+                      <button
+                          onClick={() => handleCopyBug(bug, index)}
+                          disabled={isCopied}
+                          className="flex-shrink-0 flex items-center space-x-1.5 px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-md text-xs transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                          title="Copy bug details"
+                      >
+                          <CopyIcon className="w-3.5 h-3.5" />
+                          <span>{isCopied ? 'Copied!' : 'Copy'}</span>
+                      </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="text-gray-400">No bugs detected. Great job!</p>
@@ -145,17 +212,40 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ result }) => {
       </AnalysisCard>
 
       <AnalysisCard 
-        title="Feature Summary" 
+        title="Feature Discovery" 
         icon={<FeatureIcon className="w-6 h-6 text-green-400" />} 
         count={result.features.length}
         copyContent={formatFeaturesForCopy(result.features)}
       >
         {result.features.length > 0 ? (
-          <ul className="space-y-2 list-disc list-inside text-gray-300">
+          <div className="space-y-3">
             {result.features.map((feature, index) => (
-              <li key={index}>{feature}</li>
+              <details key={index} className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden group">
+                <summary className="p-4 cursor-pointer hover:bg-gray-800/50 flex items-center justify-between transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <span className={`px-2.5 py-1 text-xs font-bold rounded-full whitespace-nowrap ${getFeatureStatusClass(feature.status)}`}>
+                      {feature.status}
+                    </span>
+                    <h3 className="font-semibold text-gray-100">{feature.name}</h3>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-500 transform transition-transform duration-200 group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </summary>
+                <div className="p-4 border-t border-gray-700 bg-black/10">
+                  <p className="text-gray-300 mb-4 pb-4 border-b border-gray-700/50">{feature.description}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    <FeatureDetailSection title="UI Routes" items={feature.ui?.routes} />
+                    <FeatureDetailSection title="UI Components" items={feature.ui?.components} />
+                    <FeatureDetailSection title="API Endpoints" items={feature.api?.endpoints} />
+                    <FeatureDetailSection title="Data Models" items={feature.data?.models} />
+                    <FeatureDetailSection title="Potential Risks" items={feature.risks} />
+                    <FeatureDetailSection title="Evidence" items={feature.evidence} />
+                  </div>
+                </div>
+              </details>
             ))}
-          </ul>
+          </div>
         ) : (
           <p className="text-gray-400">Could not determine specific features from the code.</p>
         )}

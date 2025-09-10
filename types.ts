@@ -9,10 +9,29 @@ export interface LogSuggestion {
   suggestion: string;
 }
 
+export interface DiscoveredFeature {
+  featureId: string;
+  name: string;
+  status: 'implemented' | 'partial' | 'stub';
+  description: string;
+  ui: {
+    routes: string[];
+    components: string[];
+  };
+  api: {
+    endpoints: string[];
+  };
+  data: {
+    models: string[];
+  };
+  risks: string[];
+  evidence: string[];
+}
+
 export interface AnalysisResult {
   bugs: BugReport[];
   logs: LogSuggestion[];
-  features: string[];
+  features: DiscoveredFeature[];
 }
 
 export interface AppError {
